@@ -5,19 +5,32 @@ import android.content.SharedPreferences;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ProgressBar;
 import android.widget.Toast;
 
+import com.google.gson.Gson;
+import com.roll.clientserverhttp.entities.Auth;
+import com.roll.clientserverhttp.entities.AuthResponse;
+import com.roll.clientserverhttp.model.HttpProvider;
+import com.squareup.okhttp.MediaType;
+import com.squareup.okhttp.OkHttpClient;
+import com.squareup.okhttp.Request;
+import com.squareup.okhttp.RequestBody;
+import com.squareup.okhttp.Response;
+
+import java.io.IOException;
+import java.util.concurrent.TimeUnit;
+
 public class LoginActivity extends AppCompatActivity implements View.OnClickListener {
 
     private EditText inputLogin, inputPass;
     private Button btnLogin, btnRegister;
     private ProgressBar progressBarLogin;
-    private String[] resultAsynkTask = {"Login OK", "Login ERROR!"};
-    private String login;
+    private String login, pass;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -32,19 +45,20 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
         btnLogin.setOnClickListener(this);
         btnRegister.setOnClickListener(this);
 
-        checkLogin();
+        init();
     }
 
-    private void checkLogin() {
-
+    private void init() {
         SharedPreferences sharedPreferences = getSharedPreferences("AUTH", MODE_PRIVATE);
         login = sharedPreferences.getString("LOGIN", "");
-
-        if ("".equals(login)) {
+        pass = sharedPreferences.getString("PASS", "");
+        if ("".equals(login) || "".equals(pass)) {
             return;
         }
-        startContactList();
-        finish();
+
+        inputLogin.setText(login);
+        inputPass.setText(pass);
+        new LoginAsyncTask().execute();
     }
 
     @Override
@@ -81,45 +95,73 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
         protected void onPreExecute() {
             super.onPreExecute();
             btnLogin.setEnabled(false);
+            btnRegister.setEnabled(false);
             inputLogin.setEnabled(false);
             inputPass.setEnabled(false);
             progressBarLogin.setVisibility(View.VISIBLE);
+            login = String.valueOf(inputLogin.getText());
+            pass = String.valueOf(inputPass.getText());
         }
 
         @Override
         protected String doInBackground(Void... params) {
+            String result = "Login OK!";
+            Gson gson = new Gson();
+            Auth auth = new Auth(login, pass);
+            String jsonBody = gson.toJson(auth);
 
-            return resultAsynkTask[0];
+            MediaType mediaType = MediaType.parse("application/json; charset=utf-8");
+            RequestBody body = RequestBody.create(mediaType, jsonBody);
+
+            Request request = new Request.Builder()
+                    .url(HttpProvider.BASE_URL + "/login")
+                    .post(body)
+                    .build();
+
+            OkHttpClient client = new OkHttpClient();
+            client.setReadTimeout(15, TimeUnit.SECONDS);
+            client.setConnectTimeout(15, TimeUnit.SECONDS);
+
+            try {
+                Response response = client.newCall(request).execute();
+                if (response.code() < 400) {
+                    String jsonResponse = response.body().string();
+                    Log.d("LOGIN", jsonResponse);
+                    AuthResponse authResponse = gson.fromJson(jsonResponse, AuthResponse.class);
+                    SharedPreferences sPref = getSharedPreferences("AUTH", MODE_PRIVATE);
+                    SharedPreferences.Editor editor = sPref.edit();
+                    editor.putString("TOKEN", authResponse.getToken());
+                    editor.putString("LOGIN", login);
+                    editor.putString("PASS", pass);
+                    editor.commit();
+                } else if (response.code() == 401) {
+                    result = "Wrong login or password!";
+                } else {
+                    String jsonResponse = response.body().string();
+                    Log.d("LOGIN ERROR", jsonResponse);
+                    result = "Server ERROR!";
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+                result = "Connection ERROR!";
+            }
+            return result;
         }
 
         @Override
         protected void onPostExecute(String s) {
             super.onPostExecute(s);
             btnLogin.setEnabled(true);
+            btnRegister.setEnabled(true);
             progressBarLogin.setVisibility(View.GONE);
-            inputLogin.setEnabled(false);
-            inputPass.setEnabled(false);
-            if (s.equals(resultAsynkTask[0])) {
-                Toast.makeText(LoginActivity.this, "Logon OK!", Toast.LENGTH_SHORT).show();
-                saveSP();
+            inputLogin.setEnabled(true);
+            inputPass.setEnabled(true);
+            Toast.makeText(LoginActivity.this, s, Toast.LENGTH_SHORT).show();
+            if (s.equals("Login OK!")) {
                 startContactList();
                 finish();
             }
         }
-    }
-
-    private void saveSP() {
-        login = String.valueOf(inputLogin.getText());
-        SharedPreferences sharedPreferences = getSharedPreferences("AUTH", MODE_PRIVATE);
-        SharedPreferences.Editor editor = sharedPreferences.edit();
-        editor.putString("LOGIN", login);
-        editor.putString("PASS", String.valueOf(inputPass.getText()));
-        editor.commit();
-    }
-
-    private void startContactList() {
-        Intent intent = new Intent("contact.list.dan");
-        startActivity(intent);
     }
 
     private class RegisterAsyncTask extends AsyncTask<Void, Void, String> {
@@ -128,30 +170,78 @@ public class LoginActivity extends AppCompatActivity implements View.OnClickList
         protected void onPreExecute() {
             super.onPreExecute();
             btnLogin.setEnabled(false);
+            btnRegister.setEnabled(false);
             inputLogin.setEnabled(false);
             inputPass.setEnabled(false);
             progressBarLogin.setVisibility(View.VISIBLE);
+            login = String.valueOf(inputLogin.getText());
+            pass = String.valueOf(inputPass.getText());
         }
 
         @Override
         protected String doInBackground(Void... params) {
+            String result = "Registration OK!";
+            Gson gson = new Gson();
+            Auth auth = new Auth(login, pass);
+            String jsonBody = gson.toJson(auth);
 
-            return resultAsynkTask[0];
+            MediaType mediaType = MediaType.parse("application/json; charset=utf-8");
+            RequestBody body = RequestBody.create(mediaType, jsonBody);
+
+            Request request = new Request.Builder()
+                    .url(HttpProvider.BASE_URL + "/registration")
+                    .post(body)
+                    .build();
+
+            OkHttpClient client = new OkHttpClient();
+            client.setReadTimeout(15, TimeUnit.SECONDS);
+            client.setConnectTimeout(15, TimeUnit.SECONDS);
+
+            try {
+                Response response = client.newCall(request).execute();
+                if (response.code() < 400) {
+                    String jsonResponse = response.body().string();
+                    Log.d("REGISTRATION", jsonResponse);
+                    AuthResponse authResponse = gson.fromJson(jsonResponse, AuthResponse.class);
+                    SharedPreferences sPref = getSharedPreferences("AUTH", MODE_PRIVATE);
+                    SharedPreferences.Editor editor = sPref.edit();
+                    editor.putString("TOKEN", authResponse.getToken());
+                    editor.putString("LOGIN", login);
+                    editor.putString("PASS", pass);
+                    editor.commit();
+                } else if (response.code() == 409) {
+                    result = "User already exist!";
+                } else {
+                    String jsonResponse = response.body().string();
+                    Log.d("REGISTRATION ERROR", jsonResponse);
+                    result = "Server ERROR!";
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+                result = "Connection ERROR!";
+            }
+            return result;
         }
 
         @Override
         protected void onPostExecute(String s) {
             super.onPostExecute(s);
             btnLogin.setEnabled(true);
+            btnRegister.setEnabled(true);
+            inputLogin.setEnabled(true);
+            inputPass.setEnabled(true);
             progressBarLogin.setVisibility(View.GONE);
-            inputLogin.setEnabled(false);
-            inputPass.setEnabled(false);
-            if (s.equals(resultAsynkTask[0])) {
-                Toast.makeText(LoginActivity.this, "Logon OK!", Toast.LENGTH_SHORT).show();
-                saveSP();
+            Toast.makeText(LoginActivity.this, s, Toast.LENGTH_SHORT).show();
+            if (s.equals("Registration OK!")) {
                 startContactList();
                 finish();
             }
         }
+    }
+
+
+    private void startContactList() {
+        Intent intent = new Intent("contact.list.http.dan");
+        startActivity(intent);
     }
 }
