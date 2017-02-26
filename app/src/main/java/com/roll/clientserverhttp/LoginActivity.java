@@ -11,10 +11,10 @@ import android.widget.EditText;
 import android.widget.ProgressBar;
 import android.widget.Toast;
 
-public class LoginActivity extends AppCompatActivity {
+public class LoginActivity extends AppCompatActivity implements View.OnClickListener {
 
     private EditText inputLogin, inputPass;
-    private Button btnLogin;
+    private Button btnLogin, btnRegister;
     private ProgressBar progressBarLogin;
     private String[] resultAsynkTask = {"Login OK", "Login ERROR!"};
     private String login;
@@ -27,24 +27,10 @@ public class LoginActivity extends AppCompatActivity {
         inputLogin = (EditText) findViewById(R.id.input_login);
         inputPass = (EditText) findViewById(R.id.input_password);
         btnLogin = (Button) findViewById(R.id.btn_login);
+        btnRegister = (Button) findViewById(R.id.btn_register);
         progressBarLogin = (ProgressBar) findViewById(R.id.progress_login);
-        btnLogin.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if (v.getId() == R.id.btn_login) {
-                    if ("".equals(String.valueOf(inputLogin.getText()))) {
-                        inputLogin.setError("Login is empty!");
-                        return;
-                    }
-                    if ("".equals(String.valueOf(inputPass.getText()))) {
-                        inputPass.setError("Password is Empty");
-                        return;
-                    }
-
-                    new LoginAsyncTask().execute(3000);
-                }
-            }
-        });
+        btnLogin.setOnClickListener(this);
+        btnRegister.setOnClickListener(this);
 
         checkLogin();
     }
@@ -61,7 +47,35 @@ public class LoginActivity extends AppCompatActivity {
         finish();
     }
 
-    private class LoginAsyncTask extends AsyncTask<Integer, Void, String> {
+    @Override
+    public void onClick(View v) {
+        switch (v.getId()) {
+            case R.id.btn_login:
+                if (chekFields()) {
+                    new LoginAsyncTask().execute();
+                }
+                break;
+            case R.id.btn_register:
+                if (chekFields()) {
+                    new RegisterAsyncTask().execute();
+                }
+                break;
+        }
+    }
+
+    private boolean chekFields() {
+        if ("".equals(String.valueOf(inputLogin.getText()))) {
+            inputLogin.setError("Login is empty!");
+            return false;
+        }
+        if ("".equals(String.valueOf(inputPass.getText()))) {
+            inputPass.setError("Password is Empty");
+            return false;
+        }
+        return true;
+    }
+
+    private class LoginAsyncTask extends AsyncTask<Void, Void, String> {
 
         @Override
         protected void onPreExecute() {
@@ -73,13 +87,8 @@ public class LoginActivity extends AppCompatActivity {
         }
 
         @Override
-        protected String doInBackground(Integer... params) {
-            try {
-                Thread.sleep(params[0]);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-                return resultAsynkTask[1];
-            }
+        protected String doInBackground(Void... params) {
+
             return resultAsynkTask[0];
         }
 
@@ -111,5 +120,38 @@ public class LoginActivity extends AppCompatActivity {
     private void startContactList() {
         Intent intent = new Intent("contact.list.dan");
         startActivity(intent);
+    }
+
+    private class RegisterAsyncTask extends AsyncTask<Void, Void, String> {
+
+        @Override
+        protected void onPreExecute() {
+            super.onPreExecute();
+            btnLogin.setEnabled(false);
+            inputLogin.setEnabled(false);
+            inputPass.setEnabled(false);
+            progressBarLogin.setVisibility(View.VISIBLE);
+        }
+
+        @Override
+        protected String doInBackground(Void... params) {
+
+            return resultAsynkTask[0];
+        }
+
+        @Override
+        protected void onPostExecute(String s) {
+            super.onPostExecute(s);
+            btnLogin.setEnabled(true);
+            progressBarLogin.setVisibility(View.GONE);
+            inputLogin.setEnabled(false);
+            inputPass.setEnabled(false);
+            if (s.equals(resultAsynkTask[0])) {
+                Toast.makeText(LoginActivity.this, "Logon OK!", Toast.LENGTH_SHORT).show();
+                saveSP();
+                startContactList();
+                finish();
+            }
+        }
     }
 }

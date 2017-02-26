@@ -1,4 +1,4 @@
-package com.roll.clientserverhttp;
+package com.roll.clientserverhttp.entities;
 
 /**
  * Created by RDL on 22.02.2017.

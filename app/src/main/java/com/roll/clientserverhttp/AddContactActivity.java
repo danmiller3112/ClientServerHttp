@@ -13,6 +13,7 @@ import android.widget.ProgressBar;
 import android.widget.Toast;
 
 import com.google.gson.Gson;
+import com.roll.clientserverhttp.entities.User;
 
 public class AddContactActivity extends AppCompatActivity {
 

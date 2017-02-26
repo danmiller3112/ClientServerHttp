@@ -15,6 +15,8 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.gson.Gson;
+import com.roll.clientserverhttp.adapters.ContactAdapter;
+import com.roll.clientserverhttp.entities.User;
 
 import java.util.ArrayList;
 import java.util.Collection;
