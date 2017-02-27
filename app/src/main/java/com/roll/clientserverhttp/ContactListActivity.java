@@ -19,8 +19,10 @@ import com.google.gson.Gson;
 import com.roll.clientserverhttp.adapters.ContactAdapter;
 import com.roll.clientserverhttp.entities.User;
 import com.roll.clientserverhttp.model.HttpProvider;
+import com.squareup.okhttp.MediaType;
 import com.squareup.okhttp.OkHttpClient;
 import com.squareup.okhttp.Request;
+import com.squareup.okhttp.RequestBody;
 import com.squareup.okhttp.Response;
 
 import org.json.JSONArray;
@@ -29,9 +31,6 @@ import org.json.JSONObject;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.concurrent.TimeUnit;
 
 public class ContactListActivity extends AppCompatActivity implements ContactAdapter.ViewClickListener {
@@ -141,23 +140,6 @@ public class ContactListActivity extends AppCompatActivity implements ContactAda
         }
     }
 
-    private void getUsers() {
-        Gson gson = new Gson();
-        users.clear();
-        SharedPreferences sharedPreferences = getSharedPreferences(token, MODE_PRIVATE);
-        Collection<?> tempList = sharedPreferences.getAll().values();
-        for (Object iterator : tempList) {
-            users.add(gson.fromJson(String.valueOf(iterator), User.class));
-            Collections.sort(users, new Comparator<User>() {
-                @Override
-                public int compare(User o1, User o2) {
-                    return o1.toString().compareTo(o2.toString());
-                }
-            });
-        }
-
-    }
-
     private void initAdapter() {
         adapter = new ContactAdapter(this, users, this);
         listView.setAdapter(adapter);
@@ -194,7 +176,77 @@ public class ContactListActivity extends AppCompatActivity implements ContactAda
             intent.putExtra("TOKEN", token);
             startActivity(intent);
         }
+
+        if (item.getItemId() == R.id.item_delete_all) {
+            new DelContactsAsyncTask().execute();
+        }
         return super.onOptionsItemSelected(item);
+    }
+
+    private class DelContactsAsyncTask extends AsyncTask<Void, Void, String> {
+
+        @Override
+        protected void onPreExecute() {
+            super.onPreExecute();
+            progressBarContact.setVisibility(View.VISIBLE);
+            if (users.size() == 0) {
+                txtEmpty.setVisibility(View.VISIBLE);
+            }
+        }
+
+        @Override
+        protected String doInBackground(Void... params) {
+            String result = "Delete all contacts, OK!";
+
+            MediaType mediaType = MediaType.parse("application/json; charset=utf-8");
+            RequestBody body = RequestBody.create(mediaType, "");
+
+            Request request = new Request.Builder()
+                    .header("Authorization", token)
+                    .url(HttpProvider.BASE_URL + "/clearContactsList")
+                    .post(body)
+                    .build();
+
+            OkHttpClient client = new OkHttpClient();
+            client.setReadTimeout(15, TimeUnit.SECONDS);
+            client.setConnectTimeout(15, TimeUnit.SECONDS);
+
+            try {
+                Response response = client.newCall(request).execute();
+                if (response.code() < 400) {
+                    String jsonResponse = response.body().string();
+                    Log.d("Del all contacts", jsonResponse);
+                    users.clear();
+                } else if (response.code() == 401) {
+                    result = "Wrong authorization! empty token!";
+                } else {
+                    String jsonResponse = response.body().string();
+                    Log.d("Del all contacts", jsonResponse);
+                    result = "Server ERROR!";
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+                result = "Connection ERROR!";
+            }
+            return result;
+        }
+
+        @Override
+        protected void onPostExecute(String s) {
+            super.onPostExecute(s);
+            progressBarContact.setVisibility(View.GONE);
+            Toast.makeText(ContactListActivity.this, s, Toast.LENGTH_SHORT).show();
+            if ("Delete all contacts, OK!".equals(s)) {
+                if (users.size() != 0) {
+                    txtEmpty.setVisibility(View.INVISIBLE);
+                }
+                if (adapter != null) {
+                    adapter.notifyDataSetChanged();
+                } else {
+                    initAdapter();
+                }
+            }
+        }
     }
 }
 
