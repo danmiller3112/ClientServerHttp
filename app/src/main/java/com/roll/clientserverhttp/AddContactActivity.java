@@ -13,12 +13,22 @@ import android.widget.ProgressBar;
 import android.widget.Toast;
 
 import com.google.gson.Gson;
+import com.roll.clientserverhttp.entities.Auth;
 import com.roll.clientserverhttp.entities.User;
+import com.roll.clientserverhttp.model.HttpProvider;
+import com.squareup.okhttp.MediaType;
+import com.squareup.okhttp.OkHttpClient;
+import com.squareup.okhttp.Request;
+import com.squareup.okhttp.RequestBody;
+import com.squareup.okhttp.Response;
+
+import java.io.IOException;
+import java.util.concurrent.TimeUnit;
 
 public class AddContactActivity extends AppCompatActivity {
 
     private EditText inputName, inputEmail, inputPhone, inputDesc;
-    private String login, phone;
+    private String token, phone;
     private String jsonUser;
     private MenuItem addConItem;
     private ProgressBar progressBarSave;
@@ -36,7 +46,7 @@ public class AddContactActivity extends AppCompatActivity {
         progressBarSave = (ProgressBar) findViewById(R.id.progress_save);
 
         SharedPreferences sharedPreferences = getSharedPreferences("AUTH", MODE_PRIVATE);
-        login = sharedPreferences.getString("LOGIN", "");
+        token = sharedPreferences.getString("TOKEN", "");
 
     }
 
@@ -58,15 +68,15 @@ public class AddContactActivity extends AppCompatActivity {
                 Toast.makeText(AddContactActivity.this, "Name or phone is empty", Toast.LENGTH_SHORT).show();
             } else {
                 Gson gson = new Gson();
-                jsonUser = gson.toJson(new User(name, email, phone, desc));
+                jsonUser = gson.toJson(new User(name, email, phone, desc, Long.valueOf(phone)));
                 Log.d("jsonUser", jsonUser);
-                new SaveContactAsyncTask().execute(3000);
+                new SaveContactAsyncTask().execute();
             }
         }
         return super.onOptionsItemSelected(item);
     }
 
-    private class SaveContactAsyncTask extends AsyncTask<Integer, Void, String> {
+    private class SaveContactAsyncTask extends AsyncTask<Void, Void, String> {
 
         @Override
         protected void onPreExecute() {
@@ -75,26 +85,48 @@ public class AddContactActivity extends AppCompatActivity {
         }
 
         @Override
-        protected String doInBackground(Integer... params) {
+        protected String doInBackground(Void... params) {
+            String result = "Add OK!";
+
+            MediaType mediaType = MediaType.parse("application/json; charset=utf-8");
+            RequestBody body = RequestBody.create(mediaType, jsonUser);
+
+            Request request = new Request.Builder()
+                    .header("Authorization", token)
+                    .url(HttpProvider.BASE_URL + "/setContact")
+                    .post(body)
+                    .build();
+
+            OkHttpClient client = new OkHttpClient();
+            client.setReadTimeout(15, TimeUnit.SECONDS);
+            client.setConnectTimeout(15, TimeUnit.SECONDS);
+
             try {
-                SharedPreferences sharedPreferences = getSharedPreferences(login, MODE_PRIVATE);
-                SharedPreferences.Editor editor = sharedPreferences.edit();
-                editor.putString(phone, jsonUser);
-                editor.commit();
-                Thread.sleep(params[0]);
-            } catch (InterruptedException e) {
+                Response response = client.newCall(request).execute();
+                if (response.code() < 400) {
+                    String jsonResponse = response.body().string();
+                    Log.d("ADD", jsonResponse);
+
+                } else if (response.code() == 401) {
+                    result = "Wrong authorization! empty token!";
+                } else {
+                    String jsonResponse = response.body().string();
+                    Log.d("ADD ERROR", jsonResponse);
+                    result = "Server ERROR!";
+                }
+            } catch (IOException e) {
                 e.printStackTrace();
-                return "ERROR ADD_CONTACT";
+                result = "Connection ERROR!";
             }
-            return "OK";
+            return result;
         }
 
         @Override
         protected void onPostExecute(String s) {
             super.onPostExecute(s);
             progressBarSave.setVisibility(View.GONE);
-            if ("OK".equals(s)) {
-                Toast.makeText(AddContactActivity.this, "Add contact OK!", Toast.LENGTH_SHORT).show();
+            Toast.makeText(AddContactActivity.this, s, Toast.LENGTH_SHORT).show();
+            if ("Add OK!".equals(s)) {
                 finish();
             }
         }

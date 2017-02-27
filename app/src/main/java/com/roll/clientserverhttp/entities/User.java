@@ -6,24 +6,27 @@ package com.roll.clientserverhttp.entities;
 
 public class User {
 
-    private String name, email, phone, description;
+    private String fullname, email, phoneNumber, description, address;
+    private Long contactId;
 
     public User() {
     }
 
-    public User(String name, String email, String phone, String description) {
-        this.name = name;
+    public User(String fullname, String email, String phoneNumber, String description, Long contactId) {
+        this.fullname = fullname;
         this.email = email;
-        this.phone = phone;
+        this.phoneNumber = phoneNumber;
         this.description = description;
+        this.address = "empty";
+        this.contactId = contactId;
     }
 
-    public String getName() {
-        return name;
+    public String getFullname() {
+        return fullname;
     }
 
-    public void setName(String name) {
-        this.name = name;
+    public void setFullname(String fullname) {
+        this.fullname = fullname;
     }
 
     public String getEmail() {
@@ -34,12 +37,12 @@ public class User {
         this.email = email;
     }
 
-    public String getPhone() {
-        return phone;
+    public String getPhoneNumber() {
+        return phoneNumber;
     }
 
-    public void setPhone(String phone) {
-        this.phone = phone;
+    public void setPhoneNumber(String phoneNumber) {
+        this.phoneNumber = phoneNumber;
     }
 
     public String getDescription() {
@@ -50,13 +53,31 @@ public class User {
         this.description = description;
     }
 
+    public String getAddress() {
+        return address;
+    }
+
+    public void setAddress(String address) {
+        this.address = address;
+    }
+
+    public Long getContactId() {
+        return contactId;
+    }
+
+    public void setContactId(Long contactId) {
+        this.contactId = contactId;
+    }
+
     @Override
     public String toString() {
         return "User{" +
-                "name='" + name + '\'' +
+                "fullname='" + fullname + '\'' +
                 ", email='" + email + '\'' +
-                ", phone='" + phone + '\'' +
+                ", phoneNumber='" + phoneNumber + '\'' +
                 ", description='" + description + '\'' +
+                ", address='" + address + '\'' +
+                ", contactId=" + contactId +
                 '}';
     }
 }

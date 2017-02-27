@@ -46,9 +46,9 @@ public class ViewContactActivity extends AppCompatActivity {
         Gson gson = new Gson();
         user = gson.fromJson(jsonUser, User.class);
 
-        nameView.setText(user.getName());
+        nameView.setText(user.getFullname());
         emailView.setText(user.getEmail());
-        phoneView.setText(user.getPhone());
+        phoneView.setText(user.getPhoneNumber());
         descView.setText(user.getDescription());
     }
 
@@ -104,7 +104,7 @@ public class ViewContactActivity extends AppCompatActivity {
         @Override
         protected String doInBackground(Integer... params) {
             try {
-                User newUser = new User(name, email, phone, desc);
+                User newUser = new User(name, email, phone, desc, 0L);
                 SharedPreferences sPref = getSharedPreferences(login, MODE_PRIVATE);
                 SharedPreferences.Editor editor = sPref.edit();
                 editor.remove(id);

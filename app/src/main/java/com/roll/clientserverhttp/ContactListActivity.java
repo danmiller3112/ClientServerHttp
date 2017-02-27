@@ -5,6 +5,7 @@ import android.content.SharedPreferences;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -17,20 +18,29 @@ import android.widget.Toast;
 import com.google.gson.Gson;
 import com.roll.clientserverhttp.adapters.ContactAdapter;
 import com.roll.clientserverhttp.entities.User;
+import com.roll.clientserverhttp.model.HttpProvider;
+import com.squareup.okhttp.OkHttpClient;
+import com.squareup.okhttp.Request;
+import com.squareup.okhttp.Response;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.concurrent.TimeUnit;
 
 public class ContactListActivity extends AppCompatActivity implements ContactAdapter.ViewClickListener {
 
     private ListView listView;
-    private String login;
+    private String token;
     private ArrayList<User> users = new ArrayList<>();
     private ContactAdapter adapter;
     private ProgressBar progressBarContact;
-    private ContactsAsyncTask asyncTask;
     private TextView txtEmpty;
 
     @Override
@@ -43,29 +53,25 @@ public class ContactListActivity extends AppCompatActivity implements ContactAda
         progressBarContact = (ProgressBar) findViewById(R.id.progress_contacts);
 
         SharedPreferences sharedPreferences = getSharedPreferences("AUTH", MODE_PRIVATE);
-        login = sharedPreferences.getString("LOGIN", "");
+        token = sharedPreferences.getString("TOKEN", "");
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        if ("".equals(login)) {
-            return;
-        } else {
-            new ContactsAsyncTask().execute(3000);
-        }
+        users.clear();
+        new ContactsAsyncTask().execute();
     }
 
     @Override
     public void btnViewClick(View view, int position) {
         User user = (User) adapter.getItem(position);
         Intent intent = new Intent(ContactListActivity.this, ViewContactActivity.class);
-        intent.putExtra("LOGIN", login);
-        intent.putExtra("ID", user.getPhone());
+        intent.putExtra("USER", new Gson().toJson(user));
         startActivity(intent);
     }
 
-    private class ContactsAsyncTask extends AsyncTask<Integer, Void, String> {
+    private class ContactsAsyncTask extends AsyncTask<Void, Void, String> {
 
         @Override
         protected void onPreExecute() {
@@ -77,15 +83,41 @@ public class ContactListActivity extends AppCompatActivity implements ContactAda
         }
 
         @Override
-        protected String doInBackground(Integer... params) {
-            String result = "OK";
+        protected String doInBackground(Void... params) {
+            String result = "Get all contacts, OK!";
+
+            Request request = new Request.Builder()
+                    .header("Authorization", token)
+                    .url(HttpProvider.BASE_URL + "/contactsarray")
+                    .get()
+                    .build();
+
+            OkHttpClient client = new OkHttpClient();
+            client.setReadTimeout(15, TimeUnit.SECONDS);
+            client.setConnectTimeout(15, TimeUnit.SECONDS);
+
             try {
-                getUsers();
-                Thread.sleep(params[0]);
-                if (users.size() == 0) {
-                    result = "ERROR";
+                Response response = client.newCall(request).execute();
+                if (response.code() < 400) {
+                    String jsonResponse = response.body().string();
+                    Log.d("Get all contacts", jsonResponse);
+
+                    JSONArray jsonArray = new JSONArray(new JSONObject(jsonResponse).getString("contacts"));
+                    for (int i = 0; i < jsonArray.length(); i++) {
+                        users.add(new Gson().fromJson(jsonArray.getString(i), User.class));
+                    }
+
+                } else if (response.code() == 401) {
+                    result = "Wrong authorization! empty token!";
+                } else {
+                    String jsonResponse = response.body().string();
+                    Log.d("Get all contacts", jsonResponse);
+                    result = "Server ERROR!";
                 }
-            } catch (InterruptedException e) {
+            } catch (IOException e) {
+                e.printStackTrace();
+                result = "Connection ERROR!";
+            } catch (JSONException e) {
                 e.printStackTrace();
             }
             return result;
@@ -95,7 +127,7 @@ public class ContactListActivity extends AppCompatActivity implements ContactAda
         protected void onPostExecute(String s) {
             super.onPostExecute(s);
             progressBarContact.setVisibility(View.GONE);
-            if ("OK".equals(s)) {
+            if ("Get all contacts, OK!".equals(s)) {
                 if (users.size() != 0) {
                     txtEmpty.setVisibility(View.INVISIBLE);
                 }
@@ -111,7 +143,7 @@ public class ContactListActivity extends AppCompatActivity implements ContactAda
     private void getUsers() {
         Gson gson = new Gson();
         users.clear();
-        SharedPreferences sharedPreferences = getSharedPreferences(login, MODE_PRIVATE);
+        SharedPreferences sharedPreferences = getSharedPreferences(token, MODE_PRIVATE);
         Collection<?> tempList = sharedPreferences.getAll().values();
         for (Object iterator : tempList) {
             users.add(gson.fromJson(String.valueOf(iterator), User.class));
@@ -148,7 +180,7 @@ public class ContactListActivity extends AppCompatActivity implements ContactAda
         if (item.getItemId() == R.id.item_logout) {
             SharedPreferences sPref = getSharedPreferences("AUTH", MODE_PRIVATE);
             SharedPreferences.Editor editor = sPref.edit();
-            editor.remove("LOGIN");
+            editor.clear();
             editor.commit();
 
             Intent intent = new Intent(this, LoginActivity.class);
@@ -158,7 +190,7 @@ public class ContactListActivity extends AppCompatActivity implements ContactAda
 
         if (item.getItemId() == R.id.item_add) {
             Intent intent = new Intent(this, AddContactActivity.class);
-            intent.putExtra("LOGIN", login);
+            intent.putExtra("TOKEN", token);
             startActivity(intent);
         }
         return super.onOptionsItemSelected(item);
