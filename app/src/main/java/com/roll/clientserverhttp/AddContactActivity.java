@@ -13,7 +13,6 @@ import android.widget.ProgressBar;
 import android.widget.Toast;
 
 import com.google.gson.Gson;
-import com.roll.clientserverhttp.entities.Auth;
 import com.roll.clientserverhttp.entities.User;
 import com.roll.clientserverhttp.model.HttpProvider;
 import com.squareup.okhttp.MediaType;
@@ -81,6 +80,10 @@ public class AddContactActivity extends AppCompatActivity {
         @Override
         protected void onPreExecute() {
             super.onPreExecute();
+            inputDesc.setEnabled(false);
+            inputEmail.setEnabled(false);
+            inputName.setEnabled(false);
+            inputPhone.setEnabled(false);
             progressBarSave.setVisibility(View.VISIBLE);
         }
 
@@ -125,6 +128,10 @@ public class AddContactActivity extends AppCompatActivity {
         protected void onPostExecute(String s) {
             super.onPostExecute(s);
             progressBarSave.setVisibility(View.GONE);
+            inputDesc.setEnabled(true);
+            inputEmail.setEnabled(true);
+            inputName.setEnabled(true);
+            inputPhone.setEnabled(true);
             Toast.makeText(AddContactActivity.this, s, Toast.LENGTH_SHORT).show();
             if ("Add OK!".equals(s)) {
                 finish();

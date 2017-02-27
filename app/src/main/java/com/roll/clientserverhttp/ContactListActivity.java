@@ -68,6 +68,7 @@ public class ContactListActivity extends AppCompatActivity implements ContactAda
         User user = (User) adapter.getItem(position);
         Intent intent = new Intent(ContactListActivity.this, ViewContactActivity.class);
         intent.putExtra("USER", new Gson().toJson(user));
+        intent.putExtra("TOKEN", token);
         startActivity(intent);
     }
 

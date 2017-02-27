@@ -1,10 +1,10 @@
 package com.roll.clientserverhttp;
 
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -14,12 +14,21 @@ import android.widget.Toast;
 
 import com.google.gson.Gson;
 import com.roll.clientserverhttp.entities.User;
+import com.roll.clientserverhttp.model.HttpProvider;
+import com.squareup.okhttp.MediaType;
+import com.squareup.okhttp.OkHttpClient;
+import com.squareup.okhttp.Request;
+import com.squareup.okhttp.RequestBody;
+import com.squareup.okhttp.Response;
+
+import java.io.IOException;
+import java.util.concurrent.TimeUnit;
 
 public class ViewContactActivity extends AppCompatActivity {
 
     private EditText nameView, emailView, phoneView, descView;
     private ProgressBar progressView;
-    private String id, login, jsonUser;
+    private String userJson, token;
     private String name, email, phone, desc;
     private MenuItem editItem, saveItem;
     private User user;
@@ -37,16 +46,14 @@ public class ViewContactActivity extends AppCompatActivity {
 
         Intent intent = getIntent();
         if (intent.getExtras() != null) {
-            id = intent.getExtras().getString("ID", "");
-            login = intent.getExtras().getString("LOGIN", "");
+            userJson = intent.getExtras().getString("USER", "");
+            token = intent.getExtras().getString("TOKEN", "");
         }
 
-        SharedPreferences sPref = getSharedPreferences(login, MODE_PRIVATE);
-        jsonUser = sPref.getString(id, "");
         Gson gson = new Gson();
-        user = gson.fromJson(jsonUser, User.class);
+        user = gson.fromJson(userJson, User.class);
 
-        nameView.setText(user.getFullname());
+        nameView.setText(user.getFullName());
         emailView.setText(user.getEmail());
         phoneView.setText(user.getPhoneNumber());
         descView.setText(user.getDescription());
@@ -82,14 +89,14 @@ public class ViewContactActivity extends AppCompatActivity {
                     name = String.valueOf(nameView.getText());
                     email = String.valueOf(emailView.getText());
                     desc = String.valueOf(descView.getText());
-                    new SaveAsynkTask().execute(3000);
+                    new SaveAsynkTask().execute();
                 }
                 break;
         }
         return super.onOptionsItemSelected(item);
     }
 
-    class SaveAsynkTask extends AsyncTask<Integer, Void, String> {
+    class SaveAsynkTask extends AsyncTask<Void, Void, String> {
 
         @Override
         protected void onPreExecute() {
@@ -102,27 +109,49 @@ public class ViewContactActivity extends AppCompatActivity {
         }
 
         @Override
-        protected String doInBackground(Integer... params) {
-            try {
-                User newUser = new User(name, email, phone, desc, 0L);
-                SharedPreferences sPref = getSharedPreferences(login, MODE_PRIVATE);
-                SharedPreferences.Editor editor = sPref.edit();
-                editor.remove(id);
-                editor.putString(phone, new Gson().toJson(newUser));
-                editor.commit();
-                Thread.sleep(params[0]);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
+        protected String doInBackground(Void... params) {
+            String result = "Edit OK!";
 
-            return "OK";
+            userJson = new Gson().toJson(new User(name, email, phone, desc, user.getContactId()));
+
+            MediaType mediaType = MediaType.parse("application/json; charset=utf-8");
+            RequestBody body = RequestBody.create(mediaType, userJson);
+
+            Request request = new Request.Builder()
+                    .header("Authorization", token)
+                    .url(HttpProvider.BASE_URL + "/setContact")
+                    .post(body)
+                    .build();
+
+            OkHttpClient client = new OkHttpClient();
+            client.setReadTimeout(15, TimeUnit.SECONDS);
+            client.setConnectTimeout(15, TimeUnit.SECONDS);
+
+            try {
+                Response response = client.newCall(request).execute();
+                if (response.code() < 400) {
+                    String jsonResponse = response.body().string();
+                    Log.d("EDIT", jsonResponse);
+
+                } else if (response.code() == 401) {
+                    result = "Wrong authorization! empty token!";
+                } else {
+                    String jsonResponse = response.body().string();
+                    Log.d("EDIT ERROR", jsonResponse);
+                    result = "Server ERROR!";
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+                result = "Connection ERROR!";
+            }
+            return result;
         }
 
         @Override
         protected void onPostExecute(String s) {
             super.onPostExecute(s);
             progressView.setVisibility(View.INVISIBLE);
-            Toast.makeText(ViewContactActivity.this, "Save OK!", Toast.LENGTH_SHORT).show();
+            Toast.makeText(ViewContactActivity.this, s, Toast.LENGTH_SHORT).show();
             finish();
         }
     }

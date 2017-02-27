@@ -66,7 +66,7 @@ public class ContactAdapter extends BaseAdapter {
         TextView emailTxt = (TextView) view.findViewById(R.id.txt_email);
         final Button viewBtn = (Button) view.findViewById(R.id.btn_view);
 
-        nameTxt.setText(user.getFullname());
+        nameTxt.setText(user.getFullName());
         emailTxt.setText(user.getEmail());
         viewBtn.setOnClickListener(new View.OnClickListener() {
             @Override

@@ -6,14 +6,14 @@ package com.roll.clientserverhttp.entities;
 
 public class User {
 
-    private String fullname, email, phoneNumber, description, address;
+    private String fullName, email, phoneNumber, description, address;
     private Long contactId;
 
     public User() {
     }
 
-    public User(String fullname, String email, String phoneNumber, String description, Long contactId) {
-        this.fullname = fullname;
+    public User(String fullName, String email, String phoneNumber, String description, Long contactId) {
+        this.fullName = fullName;
         this.email = email;
         this.phoneNumber = phoneNumber;
         this.description = description;
@@ -21,12 +21,12 @@ public class User {
         this.contactId = contactId;
     }
 
-    public String getFullname() {
-        return fullname;
+    public String getFullName() {
+        return fullName;
     }
 
-    public void setFullname(String fullname) {
-        this.fullname = fullname;
+    public void setFullName(String fullName) {
+        this.fullName = fullName;
     }
 
     public String getEmail() {
@@ -72,7 +72,7 @@ public class User {
     @Override
     public String toString() {
         return "User{" +
-                "fullname='" + fullname + '\'' +
+                "fullName='" + fullName + '\'' +
                 ", email='" + email + '\'' +
                 ", phoneNumber='" + phoneNumber + '\'' +
                 ", description='" + description + '\'' +
