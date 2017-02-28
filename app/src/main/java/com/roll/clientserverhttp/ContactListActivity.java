@@ -17,6 +17,7 @@ import android.widget.Toast;
 
 import com.google.gson.Gson;
 import com.roll.clientserverhttp.adapters.ContactAdapter;
+import com.roll.clientserverhttp.entities.Contacts;
 import com.roll.clientserverhttp.entities.User;
 import com.roll.clientserverhttp.model.HttpProvider;
 import com.squareup.okhttp.MediaType;
@@ -24,10 +25,6 @@ import com.squareup.okhttp.OkHttpClient;
 import com.squareup.okhttp.Request;
 import com.squareup.okhttp.RequestBody;
 import com.squareup.okhttp.Response;
-
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -58,7 +55,6 @@ public class ContactListActivity extends AppCompatActivity implements ContactAda
     @Override
     protected void onResume() {
         super.onResume();
-        users.clear();
         new ContactsAsyncTask().execute();
     }
 
@@ -76,10 +72,9 @@ public class ContactListActivity extends AppCompatActivity implements ContactAda
         @Override
         protected void onPreExecute() {
             super.onPreExecute();
+            users.clear();
             progressBarContact.setVisibility(View.VISIBLE);
-            if (users.size() == 0) {
-                txtEmpty.setVisibility(View.VISIBLE);
-            }
+            txtEmpty.setVisibility(View.VISIBLE);
         }
 
         @Override
@@ -102,11 +97,8 @@ public class ContactListActivity extends AppCompatActivity implements ContactAda
                     String jsonResponse = response.body().string();
                     Log.d("Get all contacts", jsonResponse);
 
-                    JSONArray jsonArray = new JSONArray(new JSONObject(jsonResponse).getString("contacts"));
-                    for (int i = 0; i < jsonArray.length(); i++) {
-                        users.add(new Gson().fromJson(jsonArray.getString(i), User.class));
-                    }
-
+                    Contacts contacts = new Gson().fromJson(jsonResponse, Contacts.class);
+                    users = contacts.getContacts();
                 } else if (response.code() == 401) {
                     result = "Wrong authorization! empty token!";
                 } else {
@@ -117,8 +109,6 @@ public class ContactListActivity extends AppCompatActivity implements ContactAda
             } catch (IOException e) {
                 e.printStackTrace();
                 result = "Connection ERROR!";
-            } catch (JSONException e) {
-                e.printStackTrace();
             }
             return result;
         }
