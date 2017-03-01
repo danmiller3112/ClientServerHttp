@@ -27,14 +27,13 @@ import com.squareup.okhttp.RequestBody;
 import com.squareup.okhttp.Response;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.concurrent.TimeUnit;
 
 public class ContactListActivity extends AppCompatActivity implements ContactAdapter.ViewClickListener {
 
     private ListView listView;
     private String token;
-    private ArrayList<User> users = new ArrayList<>();
+    private Contacts contacts = new Contacts();
     private ContactAdapter adapter;
     private ProgressBar progressBarContact;
     private TextView txtEmpty;
@@ -50,6 +49,20 @@ public class ContactListActivity extends AppCompatActivity implements ContactAda
 
         SharedPreferences sharedPreferences = getSharedPreferences("AUTH", MODE_PRIVATE);
         token = sharedPreferences.getString("TOKEN", "");
+
+        initAdapter();
+    }
+
+    private void initAdapter() {
+        adapter = new ContactAdapter(this, contacts.getContacts(), this);
+        listView.setAdapter(adapter);
+        listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                User user = (User) adapter.getItem(position);
+                Toast.makeText(ContactListActivity.this, "Was clicket position " + position, Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 
     @Override
@@ -72,9 +85,10 @@ public class ContactListActivity extends AppCompatActivity implements ContactAda
         @Override
         protected void onPreExecute() {
             super.onPreExecute();
-            users.clear();
+            if (contacts.getContacts().size() == 0) {
+                txtEmpty.setVisibility(View.VISIBLE);
+            }
             progressBarContact.setVisibility(View.VISIBLE);
-            txtEmpty.setVisibility(View.VISIBLE);
         }
 
         @Override
@@ -96,9 +110,7 @@ public class ContactListActivity extends AppCompatActivity implements ContactAda
                 if (response.code() < 400) {
                     String jsonResponse = response.body().string();
                     Log.d("Get all contacts", jsonResponse);
-
-                    Contacts contacts = new Gson().fromJson(jsonResponse, Contacts.class);
-                    users = contacts.getContacts();
+                    contacts = new Gson().fromJson(jsonResponse, Contacts.class);
                 } else if (response.code() == 401) {
                     result = "Wrong authorization! empty token!";
                 } else {
@@ -118,29 +130,14 @@ public class ContactListActivity extends AppCompatActivity implements ContactAda
             super.onPostExecute(s);
             progressBarContact.setVisibility(View.GONE);
             if ("Get all contacts, OK!".equals(s)) {
-                if (users.size() != 0) {
+                if (contacts.getContacts().size() != 0) {
                     txtEmpty.setVisibility(View.INVISIBLE);
                 }
-                if (adapter != null) {
-                    adapter.notifyDataSetChanged();
-                } else {
-                    initAdapter();
-                }
+                adapter.updateList(contacts.getContacts());
             }
         }
     }
 
-    private void initAdapter() {
-        adapter = new ContactAdapter(this, users, this);
-        listView.setAdapter(adapter);
-        listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-            @Override
-            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                User user = (User) adapter.getItem(position);
-                Toast.makeText(ContactListActivity.this, "Was clicket position " + position, Toast.LENGTH_SHORT).show();
-            }
-        });
-    }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
@@ -179,9 +176,6 @@ public class ContactListActivity extends AppCompatActivity implements ContactAda
         protected void onPreExecute() {
             super.onPreExecute();
             progressBarContact.setVisibility(View.VISIBLE);
-            if (users.size() == 0) {
-                txtEmpty.setVisibility(View.VISIBLE);
-            }
         }
 
         @Override
@@ -206,7 +200,7 @@ public class ContactListActivity extends AppCompatActivity implements ContactAda
                 if (response.code() < 400) {
                     String jsonResponse = response.body().string();
                     Log.d("Del all contacts", jsonResponse);
-                    users.clear();
+                    contacts.getContacts().clear();
                 } else if (response.code() == 401) {
                     result = "Wrong authorization! empty token!";
                 } else {
@@ -227,14 +221,8 @@ public class ContactListActivity extends AppCompatActivity implements ContactAda
             progressBarContact.setVisibility(View.GONE);
             Toast.makeText(ContactListActivity.this, s, Toast.LENGTH_SHORT).show();
             if ("Delete all contacts, OK!".equals(s)) {
-                if (users.size() != 0) {
-                    txtEmpty.setVisibility(View.INVISIBLE);
-                }
-                if (adapter != null) {
-                    adapter.notifyDataSetChanged();
-                } else {
-                    initAdapter();
-                }
+                txtEmpty.setVisibility(View.VISIBLE);
+                adapter.notifyDataSetChanged();
             }
         }
     }

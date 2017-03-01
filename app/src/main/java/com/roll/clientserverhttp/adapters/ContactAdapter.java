@@ -29,12 +29,18 @@ public class ContactAdapter extends BaseAdapter {
         this.listener = listener;
     }
 
+
     public interface ViewClickListener {
         void btnViewClick(View view, int position);
     }
 
     public void addUser(User user) {
         users.add(0, user);
+        notifyDataSetChanged();
+    }
+
+    public void updateList(ArrayList<User> contacts) {
+        users = contacts;
         notifyDataSetChanged();
     }
 
